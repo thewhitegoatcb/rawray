@@ -1,4 +1,5 @@
 # RawRay
+[![MSBuild](https://github.com/thewhitegoatcb/rawray/actions/workflows/msbuild.yml/badge.svg?branch=master)](https://github.com/thewhitegoatcb/rawray/actions/workflows/msbuild.yml)
 
 RawRay is a Stingray engine plugin that enables the execution of external Lua scripts before the game boots, without modifying game bundle files.
 
