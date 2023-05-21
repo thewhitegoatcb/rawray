@@ -114,7 +114,7 @@ namespace rawray::lua
 			if (lua_pcall(L, 0, LUA_MULTRET, 0) != LUA_OK)
 			{
 				auto error = lua_tolstring(L, -1, nullptr);
-				LOG_DEBUG("Error in update function: " << error);
+				LOG_DEBUG("Error in unload function: " << error);
 			}
 		}
 		unref(L);
