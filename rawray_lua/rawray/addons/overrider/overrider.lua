@@ -12,7 +12,7 @@ local lua_load
 local lua_require
 local sg_loader
 
-
+--copied this to remove dependencies
 local function table_shallow_copy(t, skip_metatable)
 	local copy = {}
 
@@ -57,18 +57,16 @@ local function proxy_lua_loader(path)
 	override.load_override = false
 	return lua_loader(path)
   else
-	rr.log_error("require:lua_loader: No load directive for: " ..path)
+	rr.log_error("require:lua_loader: No load directive for: " ..path .." resorting to default")
 	return sg_loader(path)
   end
 end
 
 local function proxy_require(path)
 	local sign, path = extract_path(path)
-	--override if path starts with "#" or the override file is on disk, @ force load original
 	local is_override = sign == "#" or (sign ~= "@" and package.searchpath(path, package.path))
 	local loaded = package.loaded[path]
 	local override
-	
 	
 	if loaded == nil then
 		--reset overrides too incase there was a forced reload
@@ -173,7 +171,7 @@ end
 local function restore_stingray_overloads()
 	require = sg.require
 	load = sg.load
-	tostring = sg.tostring
+	--tostring = sg.tostring
 	package.loaders[3] = sg.package.loaders[3]
 	package.loaders[4] = sg.package.loaders[4]
 	

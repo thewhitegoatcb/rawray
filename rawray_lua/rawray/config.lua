@@ -1,14 +1,21 @@
 rr.config = {
-
-	keep_lfs = false, -- scrubs the lfs library. it doesn't unload it, if you are using it one of the addons make sure you copy it before it gets scrubbed
-	keep_msgbox = false, --removes msgbox from rr
-	keep_raw_dofile = false, --removes raw_dofile from rr
-	keep_openlibs = false, --removes openlibs from rr
+	keep_lfs = false,
+	keep_msgbox = false,
+	keep_raw_dofile = false,
+	keep_openlibs = false,
 	
-	--overrider--
-	keep_io = false, --restores io module
-	keep_os = false, --restores os module
-	keep_ffi = false, --restores ffi module
-	keep_loadlib = false, --restores package.loadlib
-	-------------
+	overrider = {
+		enable = true,
+		keep_io = false, -- restores io module
+		keep_os = false, -- restores os module
+		keep_ffi = false, -- restores ffi module
+		keep_loadlib = false, -- restores package.loadlib
+		keep_tostring = false, -- needed for the debugger, version check, its a hack need a better solution
+	},
+	
+	debugger = {
+		enable = false,
+		apply_new_overrides = false, -- applies some overrides for a new version of luajit to work(depended on overrider)
+		address = "127.0.0.1:12302",
+	}
 }

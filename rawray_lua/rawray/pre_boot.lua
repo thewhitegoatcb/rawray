@@ -9,7 +9,7 @@ local function scrub_library(lib)
 end
 	
 local function get_rawray_root_dir()
-  return lfs.currentdir():match("(.*)[/\\][^/\\]+[/\\]?$") .."\\rawray\\"
+  return lfs.currentdir():match("(.*)[/\\][^/\\]+[/\\]?$") .."/rawray/"
 end
 
 local function load_config()
@@ -43,7 +43,7 @@ local function process_config()
 end
 
 local function addons_load(path)
-	local res, addon = pcall(rr.raw_dofile, path.."\\init.lua")
+	local res, addon = pcall(rr.raw_dofile, path.."/init.lua")
 	if not res then
 		rr.log_error("Failed loading addon at:" ..path .. " , with error: " ..addon)
 		return
