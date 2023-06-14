@@ -27,7 +27,12 @@ An example of an override can be seen in [boot.lua](rawray_lua/rawray/overrides/
 The configuration can be found in [config.lua](rawray_lua/rawray/config.lua).
 
 ## Installation
-To install RawRay, extract the [Installation files](https://github.com/thewhitegoatcb/rawray/releases/latest) into the game's root directory.
+To install RawRay
 
+1. Extract the [Installation files](https://github.com/thewhitegoatcb/rawray/releases/latest) into the game's root directory, in example of a typical installation:
+```
+C:/Program Files (x86)/Steam/steamapps/common/Warhammer Vermintide 2/rawray
+```
+2. Run `_RawRay_Plugin_Install.bat` **OR** copy `rawray/plugins/rawray.dll` into `binaries/plugins/rawray.dll` and `binaries_dx12/plugins/rawray.dll`
 ## Supported Games
 * Warhammer: Vermintide 2 (Modded Realm only)
