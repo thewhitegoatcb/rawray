@@ -13,10 +13,9 @@ local lua_require
 local sg_loader
 
 --copied this to remove dependencies
-local function table_shallow_copy(t, skip_metatable)
+ --local  table_shallow_copy = package.preload["table.clone"] or function(t)
+local table_shallow_copy = function(t)
 	local copy = {}
-
-	assert(skip_metatable or getmetatable(t) == nil, "Metatables will be sliced off")
 
 	for key, value in pairs(t) do
 		copy[key] = value
@@ -26,8 +25,10 @@ local function table_shallow_copy(t, skip_metatable)
 end
 
 local function isfileexists(path)
-	local attr = _lfs.attributes(path)
-	return attr and attr.mode == "file"
+	return package.searchpath(path, package.path) ~= nil
+
+	--local attr = _lfs.attributes(path)
+	--return attr and attr.mode == "file"
 end
 
 local function extract_path(path)
@@ -41,25 +42,41 @@ local function extract_path(path)
 	return sign, path
 end
 
+local function should_override(path)
+	local sign, path = extract_path(path)
+	
+	if sign == "@" then
+		return false, path
+	elseif sign == "#" then
+		return true, package.searchpath(path, package.path)
+	else
+		local system_path = package.searchpath(path, package.path)
+		if system_path then
+			return true, system_path
+		end
+		return false, path
+	end
+end
+
 local function proxy_lua_loader(path)
-  local override = package.overrides[path]
-  
-  if override == nil then
-	rr.log_error("require:lua_loader: Override is nil for: " ..path)
-	override = {}
-  end
-  
-  if override.load_original then
-	override.load_original = false
-	return sg_loader(path)
-  elseif override.load_override then
-    rr.log_info("Overriding require: " .. path)
-	override.load_override = false
-	return lua_loader(path)
-  else
-	rr.log_error("require:lua_loader: No load directive for: " ..path .." resorting to default")
-	return sg_loader(path)
-  end
+	local override = package.overrides[path]
+
+	if override == nil then
+		rr.log_error("require:lua_loader: Override is nil for: " ..path)
+		override = {}
+  	end
+
+	if override.load_original then
+		override.load_original = false
+		return sg_loader(path)
+	elseif override.load_override then
+		rr.log_info("Overriding require: " .. path)
+	  	override.load_override = false
+	  	return lua_loader(path)
+	else	
+		rr.log_warning("require:lua_loader: No load directive for: " ..path .." resorting to default")
+		return sg_loader(path)
+	end
 end
 
 local function proxy_require(path)
@@ -68,79 +85,70 @@ local function proxy_require(path)
 	local loaded = package.loaded[path]
 	local override
 	
-	if loaded == nil then
-		--reset overrides too incase there was a forced reload
-		override = {}
-		package.overrides[path] = override
-	else
+	if loaded ~= nil then
 		override = package.overrides[path]
 		if override == nil then
 			override = { original = loaded }
 			package.overrides[path] = override
 		end
+	else
+		-- reset overrides too incase there was a forced reload
+		override = {}
+		package.overrides[path] = override
 	end
 	
 	if is_override then
-		if override.override then
-			--return existing override
-			--TODO add preload support
+		if override.override ~= nil then
+			-- return existing override
+			-- TODO add preload support
 			return override.override
 		else
-			if loaded then
-				package.loaded[path] = nil
-			end
+			package.loaded[path] = nil
 			override.load_override = true
-			local res = lua_require(path) or true
-			override.override = res
-			return res
+			override.override = lua_require(path)
+			return override.override
 		end
 	else --use original
-		if override.original then
+		if override.original ~= nil then
 			return override.original
 		else
-			if loaded then
-				package.loaded[path] = nil
-			end
+			package.loaded[path] = nil
 			override.load_original = true
-			local res = lua_require(path) or true
-			override.original = res
-			return res
+			override.original = lua_require(path)
+			return override.original
 		end
 	end
 end
 
 local function proxy_dofile(path)
-	local sign, path = extract_path(path)
-	local system_path = overrides_path ..path ..".lua"
+	local is_override, system_path = should_override(path)
 	
-	local is_override = sign == "#" or (sign ~= "@" and isfileexists(system_path))
-  
 	if is_override then
 		rr.log_info("Overriding dofile: " ..path .." with: " ..system_path)
 		return lua_dofile(system_path)
 	else
-		return sg.dofile(path)
+		return sg.dofile(system_path)
 	end
 	
 end
 
 local function proxy_loadfile(path)
-	local sign, path = extract_path(path)
-	local system_path = overrides_path ..path ..".lua"
-	
-	local is_override = sign == "#" or (sign ~= "@" and isfileexists(system_path))
+	local is_override, system_path = should_override(path)
 	
 	if is_override then
 		rr.log_info("Overriding loadfile: " ..path .." with: " ..system_path)
 		return lua_loadfile(system_path)
 	else
-		return sg.loadfile(path)
+		return sg.loadfile(system_path)
 	end
 end
 
+
+
 local function copy_stingray_overloads()
-	sg.package = table_shallow_copy(package, true)
-	sg.package.loaders = table_shallow_copy(package.loaders, true)
+	sg.package = table_shallow_copy(package)
+	sg.package.loaders = table_shallow_copy(package.loaders)
+	--sg.package.preload = table_shallow_copy(package.preload, true)
 	sg.require = require
 	sg.dofile = dofile
 	sg.loadfile = loadfile
@@ -151,11 +159,21 @@ end
 
 local function reloadlibs()
 	rr.openlibs()
-	rr.openlibs = nil
 end
 
 local function repath()
-	package.path = overrides_path .."?.lua;"
+	local paths
+	if rr.config and rr.config.overrider and rr.config.overrider.paths then
+		paths = rr.config.overrider.paths
+		package.path = ""
+	else
+		package.path = rr.root_dir .."overrides/?.lua;"
+		return
+	end
+	
+	for _, path in ipairs(paths) do
+		package.path = package.path ..path ..";"
+	end
 end
 
 local function copy_std_lua_funcs()
@@ -171,10 +189,9 @@ end
 local function restore_stingray_overloads()
 	require = sg.require
 	load = sg.load
-	--tostring = sg.tostring
+	tostring = sg.tostring
 	package.loaders[3] = sg.package.loaders[3]
 	package.loaders[4] = sg.package.loaders[4]
-	
 end
 
 local function place_proxies()

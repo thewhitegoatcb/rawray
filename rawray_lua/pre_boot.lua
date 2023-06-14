@@ -13,11 +13,16 @@ local function get_rawray_root_dir()
 end
 
 local function load_config()
-	local res, error_str = pcall(rr.dofile, "config.lua")
+	local res, config = pcall(rr.dofile, "config.lua")
 	if res then
-		rr.log_info("Loaded config")
+		if type(config) == "table" then
+			rr.config = config
+			rr.log_info("Loaded config")
+		else
+			rr.log_error("Failed to load config, isn't a table it's:" ..type(config))
+		end
 	else
-		rr.log_error("Failed to load config: " ..error_str)
+		rr.log_error("Failed to load config: " ..config)
 	end
 end
 
@@ -57,13 +62,16 @@ local function addons_load(path)
 		return
 	end
 	rr.addons[addon.name] = addon
-	local res, error_str = pcall(addon.onload)
-	if not res then
-		rr.log_error("Failed loading addon: "..addon.name .." onload: " ..error_str)
-		rr.addons[addon.name] = nil
-		return
+
+	if type(addon.all_loaded) == "function" then
+		local res, error_str = pcall(addon.onload)
+		if not res then
+			rr.log_error("Failed loading addon: "..addon.name .." onload: " ..error_str)
+			rr.addons[addon.name] = nil
+			return
+		end
+		rr.log_info("Loaded addon: "..addon.name)
 	end
-	rr.log_info("Loaded addon: "..addon.name)
 end
 
 local function addons_load_all()
