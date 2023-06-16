@@ -63,7 +63,7 @@ local function addons_load(path)
 	end
 	rr.addons[addon.name] = addon
 
-	if type(addon.all_loaded) == "function" then
+	if type(addon.onload) == "function" then
 		local res, error_str = pcall(addon.onload)
 		if not res then
 			rr.log_error("Failed loading addon: "..addon.name .." onload: " ..error_str)
